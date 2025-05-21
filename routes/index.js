@@ -55,30 +55,47 @@ router.get("/list", (req, res) => {
 router.get("/view", (req, res) => {
   try {
     if (!req.query.path) throw new Error("Parameter path diperlukan");
-    console.log(req.query.path)
-    const filePath = path.join(BASE_DIR, req.query.path);
-    if (!isSafePath(filePath) || !fs.existsSync(filePath)) {
+    
+    // Decode URI component dan normalisasi path
+    const decodedPath = decodeURIComponent(req.query.path);
+    const filePath = path.join(BASE_DIR, decodedPath);
+    
+    console.log('Requested path:', decodedPath);
+    console.log('Full path:', filePath);
+
+    if (!isSafePath(filePath)) {
+      throw new Error("Path tidak valid");
+    }
+
+    if (!fs.existsSync(filePath)) {
+      console.log('File tidak ditemukan di:', filePath);
       throw new Error("File tidak ditemukan");
     }
 
     const ext = path.extname(filePath).toLowerCase();
     if (!ALLOWED_EXT.includes(ext)) {
-      throw new Error("Tipe file tidak didukung");
+      throw new Error(`Tipe file ${ext} tidak didukung`);
     }
 
-    // Set header sesuai tipe file
+    // Verifikasi permission
+    try {
+      fs.accessSync(filePath, fs.constants.R_OK);
+    } catch (accessError) {
+      throw new Error("Tidak memiliki izin membaca file");
+    }
+
     const mimeTypes = {
       ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
       ".png": "image/png",
       ".pdf": "application/pdf",
-      ".xlsx":
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     };
 
     res.setHeader("Content-Type", mimeTypes[ext] || "application/octet-stream");
     fs.createReadStream(filePath).pipe(res);
   } catch (error) {
-    console.error(error);
+    console.error('Error in /view:', error);
     res.status(400).json({
       message: error.message,
     });
