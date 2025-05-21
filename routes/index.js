@@ -55,7 +55,7 @@ router.get("/list", (req, res) => {
 router.get("/view", (req, res) => {
   try {
     if (!req.query.path) throw new Error("Parameter path diperlukan");
-    console/log(req.query.path)
+    console.log(req.query.path)
     const filePath = path.join(BASE_DIR, req.query.path);
     if (!isSafePath(filePath) || !fs.existsSync(filePath)) {
       throw new Error("File tidak ditemukan");
